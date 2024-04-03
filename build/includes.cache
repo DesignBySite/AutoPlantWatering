@@ -11,6 +11,56 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "Adafruit_ADS1X15.h",
+    "Includepath": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_ADS1X15"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "Adafruit_I2CDevice.h",
+    "Includepath": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "Wire.h",
+    "Includepath": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/Wire"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_ADS1X15/Adafruit_ADS1X15.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO/Adafruit_BusIO_Register.cpp",
+    "Include": "SPI.h",
+    "Includepath": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/SPI"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO/Adafruit_BusIO_Register.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO/Adafruit_I2CDevice.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO/Adafruit_SPIDevice.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/Wire/Wire.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/SPI/SPI.cpp",
     "Include": "",
     "Includepath": null
   }
