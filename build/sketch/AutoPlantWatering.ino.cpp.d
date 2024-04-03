@@ -49,4 +49,7 @@
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/md5.h \
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/debug.h \
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/variants/nodemcu/pins_arduino.h \
- /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/variants/nodemcu/../generic/common.h
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/variants/nodemcu/../generic/common.h \
+ /Users/kevinhome/Documents/Arduino/libraries/Adafruit_ADS1X15/Adafruit_ADS1X15.h \
+ /Users/kevinhome/Documents/Arduino/libraries/Adafruit_BusIO/Adafruit_I2CDevice.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/Wire/Wire.h
