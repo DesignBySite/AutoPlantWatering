@@ -2,59 +2,45 @@
 
 Adafruit_ADS1015 ads;
 
-#define D3_PIN D3 // Define the pin connected to the relay
-
 void setup() {
   Serial.begin(9600); // Initialize serial communication
   ads.begin(0x48);
-  pinMode(D3_PIN, OUTPUT); // Set the D3 pin as an outputP
+  pinMode(D3, OUTPUT); // Set the D3 pin as an output
+  pinMode(D4, OUTPUT); // Set the D4 pin as an output
 }
 
 void loop() {
-  // Call the engageWatering function only when a certain condition is met.
-  // For example, you could use a button press, a sensor threshold, or just a simple delay as shown here.
+  engageWatering(0, D3); // Call the watering function
+  engageWatering(1, D4);
 
-
-  printMoistureReading();
-  engageWatering(); // Call the watering function
-  
-  delay(3000); // Wait for 30 seconds before calling the function again. Adjust as per your requirement.
+  delay(3000); // Wait for 3 seconds before calling the function again. Adjust as per your requirement.
 }
 
-void printMoistureReading() {
-  int16_t adc1;
-  adc1 = ads.readADC_SingleEnded(1);
-
-  
-
-  Serial.print("Moisture Level ADC Value pin 1: ");
-  Serial.println(adc1);
-}
-
-void engageWatering() {
+void engageWatering(int channel, int pinNum) {
   int dryest = 938;
   int wettest = 448;
+  int16_t adcValue = ads.readADC_SingleEnded(channel);
+  int moisturePercentage = map(adcValue, wettest, dryest, 100, 0); //calculate moisture into a decimal
 
-  int16_t adc0 = ads.readADC_SingleEnded(0);
+  moisturePrint(channel, moisturePercentage);
 
-  int moisturePercentage = map(adc0, wettest, dryest, 100, 0); //calculate moisture into a decimal
-  Serial.print("Moisture Level ADC Value pin 0: ");
-  Serial.println(moisturePercentage);
-  Serial.println("%");
+  if (moisturePercentage <= 15) {
+      digitalWrite(pinNum, LOW); // engage relay
 
-  if (moisturePercentage <= 10) {
-      digitalWrite(D3_PIN, LOW); // engage relay
-      do {
+      while (moisturePercentage <= 60) {
         delay(1000);
-        adc0 = ads.readADC_SingleEnded(0); // get new reading from pin
-
-        moisturePercentage = map(adc0, wettest, dryest, 100, 0); //recalculate moisture
-
-        Serial.print("Watering at ");
-        Serial.println(moisturePercentage);
-        Serial.println("%");
-
-      } while (moisturePercentage <= 60);
-      digitalWrite(D3_PIN, HIGH);
+        adcValue = ads.readADC_SingleEnded(channel); // get new reading from pin
+        moisturePercentage = map(adcValue, wettest, dryest, 100, 0); //recalculate moisture
+        moisturePrint(channel, moisturePercentage);
+      };
   }
+  digitalWrite(pinNum, HIGH); // disengage relay
+}
+
+void moisturePrint(int channel, int moisture) {
+  Serial.print("Moisture Level ADC Value pin ");
+  Serial.print(channel);
+  Serial.print(": ");
+  Serial.print(moisture);
+  Serial.println("%");
 }
