@@ -15,9 +15,9 @@ Adafruit_ADS1015 ads;
 void setup();
 #line 29 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loop();
-#line 36 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 39 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void engageWatering(int channel, int pinNum);
-#line 57 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 60 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void moisturePrint(int channel, int moisture);
 #line 12 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void setup() {
@@ -38,6 +38,9 @@ void setup() {
 }
 
 void loop() {
+/*****************/
+/* Uncomment once done with Wifi */
+/*****************/
   // engageWatering(0, D3); // Call the watering function
   // engageWatering(1, D4);
 
