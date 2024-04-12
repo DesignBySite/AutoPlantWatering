@@ -28,6 +28,9 @@ void setup() {
 }
 
 void loop() {
+/*****************/
+/* Uncomment once done with Wifi */
+/*****************/
   // engageWatering(0, D3); // Call the watering function
   // engageWatering(1, D4);
 
