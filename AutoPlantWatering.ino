@@ -1,17 +1,37 @@
 #include <Adafruit_ADS1X15.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include "./secrets.h"
+
+const char* ssid = SECRET_WIFI;
+const char* password = SECRET_PASS;
+const char* serverUrl = "http://yourserver.com/data";
 
 Adafruit_ADS1015 ads;
 
 void setup() {
   Serial.begin(9600); // Initialize serial communication
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  };
+  delay(1000);
+  Serial.print("Connected Successfully to ");
+  Serial.println(SECRET_WIFI);
+  
   ads.begin(0x48);
   pinMode(D3, OUTPUT); // Set the D3 pin as an output
   pinMode(D4, OUTPUT); // Set the D4 pin as an output
 }
 
 void loop() {
-  engageWatering(0, D3); // Call the watering function
-  engageWatering(1, D4);
+/*****************/
+/* Uncomment once done with Wifi */
+/*****************/
+  // engageWatering(0, D3); // Call the watering function
+  // engageWatering(1, D4);
 
   delay(3000); // Wait for 3 seconds before calling the function again. Adjust as per your requirement.
 }
