@@ -1,13 +1,17 @@
 #include <Adafruit_ADS1X15.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+#include <ArduinoJson.h>
 #include "./secrets.h"
 
 const char* ssid = SECRET_WIFI;
 const char* password = SECRET_PASS;
-const char* serverUrl = "http://yourserver.com/data";
+const char* serverUrl = SECRET_SERVER;
 
 Adafruit_ADS1015 ads;
+WiFiClient wifiClient;
+HTTPClient http;
 
 void setup() {
   Serial.begin(9600); // Initialize serial communication
@@ -17,6 +21,7 @@ void setup() {
     delay(1000);
     Serial.println("Connecting to WiFi...");
   };
+  
   delay(1000);
   Serial.print("Connected Successfully to ");
   Serial.println(SECRET_WIFI);
@@ -27,40 +32,48 @@ void setup() {
 }
 
 void loop() {
-/*****************/
-/* Uncomment once done with Wifi */
-/*****************/
-  // engageWatering(0, D3); // Call the watering function
-  // engageWatering(1, D4);
+  engageWatering(0, D3); // Call the watering function
+  engageWatering(1, D4);
 
-  delay(3000); // Wait for 3 seconds before calling the function again. Adjust as per your requirement.
+  delay(30000); // Wait for 30 seconds before calling the function again. Adjust as per your requirement.
+}
+
+int updateAndSendMoisture(int channel) {
+  int16_t adcValue = ads.readADC_SingleEnded(channel);// get new reading from pin
+  int moisturePercentage = map(adcValue, 448, 938, 100, 0);  // Assuming these are constants calculate moisture into a decimal
+  sendData(channel, moisturePercentage);
 }
 
 void engageWatering(int channel, int pinNum) {
-  int dryest = 938;
-  int wettest = 448;
-  int16_t adcValue = ads.readADC_SingleEnded(channel);
-  int moisturePercentage = map(adcValue, wettest, dryest, 100, 0); //calculate moisture into a decimal
-
-  moisturePrint(channel, moisturePercentage);
+  int moisturePercentage = updateAndSendMoisture(channel);
 
   if (moisturePercentage <= 15) {
-      digitalWrite(pinNum, LOW); // engage relay
-
+      digitalWrite(pinNum, LOW); // Engage relay
       while (moisturePercentage <= 60) {
         delay(1000);
-        adcValue = ads.readADC_SingleEnded(channel); // get new reading from pin
-        moisturePercentage = map(adcValue, wettest, dryest, 100, 0); //recalculate moisture
-        moisturePrint(channel, moisturePercentage);
-      };
+        moisturePercentage = updateAndSendMoisture(channel); //recalculate moisture
+      }
+      digitalWrite(pinNum, HIGH); // Disengage relay
   }
-  digitalWrite(pinNum, HIGH); // disengage relay
 }
 
-void moisturePrint(int channel, int moisture) {
-  Serial.print("Moisture Level ADC Value pin ");
-  Serial.print(channel);
-  Serial.print(": ");
-  Serial.print(moisture);
-  Serial.println("%");
+void sendJsonData(DynamicJsonDocument& doc) {
+  String jsonObject;
+  serializeJson(doc, jsonObject);
+
+  http.begin(wifiClient, serverUrl);
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST(jsonObject);
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpResponseCode);
+  http.end();
+}
+
+void sendData(int channel, int moisture) {
+  DynamicJsonDocument doc(1024);
+  JsonObject sensor = doc.createNestedObject("sensor");
+  sensor["number"] = channel;
+  sensor["value"] = moisture;
+
+  sendJsonData(doc);
 }

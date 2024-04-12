@@ -36,6 +36,11 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "ArduinoJson.h",
+    "Includepath": "/Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
     "Include": "",
     "Includepath": null
   },
