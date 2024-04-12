@@ -8,7 +8,7 @@ app.post('/data', (req, res) => {
   res.status(200).send('Data received successfully');
 });
 
-const PORT = 3000;
+const PORT = 3050;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
