@@ -140,4 +140,9 @@
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson.h \
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson.hpp \
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson/Configuration.hpp \
+ /Users/kevinhome/Documents/Arduino/libraries/NTPClient/NTPClient.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/Udp.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WiFi/src/WiFiUdp.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WiFi/src/include/slist.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/EEPROM/EEPROM.h \
  /Users/kevinhome/AutoPlantWatering/build/sketch/./secrets.h
