@@ -36,6 +36,11 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "ESP8266WebServer.h",
+    "Includepath": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
     "Include": "ArduinoJson.h",
     "Includepath": "/Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src"
   },
@@ -166,6 +171,11 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/mimetable.cpp",
     "Include": "",
     "Includepath": null
   },

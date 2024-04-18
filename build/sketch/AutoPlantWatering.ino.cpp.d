@@ -137,6 +137,22 @@
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.h \
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/StreamString.h \
  /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WiFi/src/WiFiClient.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/ESP8266WebServer.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/mimetable.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/Uri.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/RequestHandler.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/ESP8266WebServer-impl.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/libb64/cencode.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WiFi/src/WiFiServer.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/ESP8266WebServer.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/base64.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/RequestHandlersImpl.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/RequestHandler.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/detail/mimetable.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/Uri.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/StreamDev.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/cores/esp8266/esp_priv.h \
+ /Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src/Parsing-impl.h \
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson.h \
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson.hpp \
  /Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src/ArduinoJson/Configuration.hpp \
