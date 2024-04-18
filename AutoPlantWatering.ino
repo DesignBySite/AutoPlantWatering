@@ -1,6 +1,7 @@
 #include <Adafruit_ADS1X15.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <NTPClient.h>
@@ -30,6 +31,23 @@ struct SensorData {
 };
 
 SensorData sensors[4];
+ESP8266WebServer server(80);
+
+void handlePost() {
+  if (server.hasArg("plain")) {
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, body);
+    int sensorNumber = doc["sensorNumber"];
+    bool safetyFlag = doc["safetyFlag"];
+
+    sensors[sensorNumber].safetyFlag = safetyFlag;
+    saveSensorData();
+    server.send(200, "application/json", "{\"status\":\"received\"}");
+  } else {
+    server.send(500, "text/plain", "Server Error: Missing Data");
+  }
+}
 
 void saveSensorData() {
     int startAddress = 0;
@@ -71,7 +89,11 @@ void setup() {
   Serial.println(SECRET_WIFI);
 
   EEPROM.begin(512);  // Ensure enough space is allocated
-  loadSensorData();  // Load sensor data from EEPROM
+
+  server.on("/updateFlag", HTTP_POST, handlePost);  // Setup the path and handler
+  server.begin(); // Start the server
+  Serial.print("HTTP server started");
+  Serial.println(WiFi.localIP());
 
   ads.begin(0x48);
   pinMode(D3, OUTPUT); // Set the D3 pin as an output
@@ -79,6 +101,7 @@ void setup() {
 }
 
 void loop() {
+  server.handleClient();
   loadSensorData();
   delay(1000);
   engageWatering(0, D3); // Call the watering function
