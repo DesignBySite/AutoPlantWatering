@@ -28,6 +28,7 @@
                 "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/Wire",
                 "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WiFi/src",
                 "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266HTTPClient/src",
+                "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266WebServer/src",
                 "/Users/kevinhome/Documents/Arduino/libraries/ArduinoJson/src",
                 "/Users/kevinhome/Documents/Arduino/libraries/NTPClient",
                 "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/EEPROM",

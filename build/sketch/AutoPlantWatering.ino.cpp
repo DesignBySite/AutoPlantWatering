@@ -3,6 +3,7 @@
 #include <Adafruit_ADS1X15.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <NTPClient.h>
@@ -32,28 +33,47 @@ struct SensorData {
 };
 
 SensorData sensors[4];
+ESP8266WebServer server(80);
 
-#line 34 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 36 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+void handlePost();
+#line 52 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void saveSensorData();
-#line 45 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 63 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loadSensorData();
-#line 55 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 73 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void setup();
-#line 81 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 103 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loop();
-#line 91 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 114 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 int updateAndSendMoisture(int channel, string state, bool safetyFlag);
-#line 100 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 123 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void engageWatering(int channel, int pinNum);
-#line 134 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 150 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void sendJsonData(DynamicJsonDocument& doc);
-#line 146 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 160 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void updateSensor(int channel, int moisture, string state, bool safetyFlag);
-#line 155 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 169 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void sendData(int channel);
-#line 168 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 182 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 string getTime();
-#line 34 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 36 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+void handlePost() {
+  if (server.hasArg("plain")) {
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, body);
+    int sensorNumber = doc["sensorNumber"];
+    bool safetyFlag = doc["safetyFlag"];
+
+    sensors[sensorNumber].safetyFlag = safetyFlag;
+    saveSensorData();
+    server.send(200, "application/json", "{\"status\":\"received\"}");
+  } else {
+    server.send(500, "text/plain", "Server Error: Missing Data");
+  }
+}
+
 void saveSensorData() {
     int startAddress = 0;
     for (int i = 0; i < 4; i++) {
@@ -94,7 +114,11 @@ void setup() {
   Serial.println(SECRET_WIFI);
 
   EEPROM.begin(512);  // Ensure enough space is allocated
-  loadSensorData();  // Load sensor data from EEPROM
+
+  server.on("/updateFlag", HTTP_POST, handlePost);  // Setup the path and handler
+  server.begin(); // Start the server
+  Serial.print("HTTP server started");
+  Serial.println(WiFi.localIP());
 
   ads.begin(0x48);
   pinMode(D3, OUTPUT); // Set the D3 pin as an output
@@ -102,6 +126,7 @@ void setup() {
 }
 
 void loop() {
+  server.handleClient();
   loadSensorData();
   delay(1000);
   engageWatering(0, D3); // Call the watering function
@@ -123,17 +148,10 @@ int updateAndSendMoisture(int channel, string state, bool safetyFlag) {
 void engageWatering(int channel, int pinNum) {
   if (sensors[channel].safetyFlag) {
     digitalWrite(pinNum, HIGH); // Disengage relay
-    Serial.print("Warning, check status of sensor: ");
-    Serial.println(channel);
     return;
   }
-
-  Serial.print("Engaging watering for channel: ");
-  Serial.println(channel);
   
   int moisturePercentage = updateAndSendMoisture(channel, "off", false);
-  Serial.print("Moisture: ");
-  Serial.println(moisturePercentage);
   int safetyTimer = 0;
 
   if (moisturePercentage <= 10 && !sensors[channel].safetyFlag) {
@@ -161,8 +179,6 @@ void sendJsonData(DynamicJsonDocument& doc) {
   http.begin(wifiClient, serverUrl);
   http.addHeader("Content-Type", "application/json");
   int httpResponseCode = http.POST(jsonObject);
-  Serial.print("HTTP Response code: ");
-  Serial.println(httpResponseCode);
   http.end();
 }
 // Example of updating sensor data

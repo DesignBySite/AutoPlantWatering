@@ -10,9 +10,10 @@
 # 10 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 # 11 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 # 12 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
+# 13 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 
 
-# 13 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+# 14 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 using namespace std;
 
 const char* ssid = "Kevin Home 2.4";
@@ -33,6 +34,23 @@ struct SensorData {
 };
 
 SensorData sensors[4];
+ESP8266WebServer server(80);
+
+void handlePost() {
+  if (server.hasArg("plain")) {
+    String body = server.arg("plain");
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, body);
+    int sensorNumber = doc["sensorNumber"];
+    bool safetyFlag = doc["safetyFlag"];
+
+    sensors[sensorNumber].safetyFlag = safetyFlag;
+    saveSensorData();
+    server.send(200, "application/json", "{\"status\":\"received\"}");
+  } else {
+    server.send(500, "text/plain", "Server Error: Missing Data");
+  }
+}
 
 void saveSensorData() {
     int startAddress = 0;
@@ -74,7 +92,11 @@ void setup() {
   Serial.println("Kevin Home 2.4");
 
   EEPROM.begin(512); // Ensure enough space is allocated
-  loadSensorData(); // Load sensor data from EEPROM
+
+  server.on("/updateFlag", HTTP_POST, handlePost); // Setup the path and handler
+  server.begin(); // Start the server
+  Serial.print("HTTP server started");
+  Serial.println(WiFi.localIP());
 
   ads.begin(0x48);
   pinMode(D3, 0x01); // Set the D3 pin as an output
@@ -82,6 +104,7 @@ void setup() {
 }
 
 void loop() {
+  server.handleClient();
   loadSensorData();
   delay(1000);
   engageWatering(0, D3); // Call the watering function
@@ -103,17 +126,10 @@ int updateAndSendMoisture(int channel, string state, bool safetyFlag) {
 void engageWatering(int channel, int pinNum) {
   if (sensors[channel].safetyFlag) {
     digitalWrite(pinNum, 0x1); // Disengage relay
-    Serial.print("Warning, check status of sensor: ");
-    Serial.println(channel);
     return;
   }
 
-  Serial.print("Engaging watering for channel: ");
-  Serial.println(channel);
-
   int moisturePercentage = updateAndSendMoisture(channel, "off", false);
-  Serial.print("Moisture: ");
-  Serial.println(moisturePercentage);
   int safetyTimer = 0;
 
   if (moisturePercentage <= 10 && !sensors[channel].safetyFlag) {
@@ -141,8 +157,6 @@ void sendJsonData(DynamicJsonDocument& doc) {
   http.begin(wifiClient, serverUrl);
   http.addHeader("Content-Type", "application/json");
   int httpResponseCode = http.POST(jsonObject);
-  Serial.print("HTTP Response code: ");
-  Serial.println(httpResponseCode);
   http.end();
 }
 // Example of updating sensor data
