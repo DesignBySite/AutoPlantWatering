@@ -41,6 +41,16 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "NTPClient.h",
+    "Includepath": "/Users/kevinhome/Documents/Arduino/libraries/NTPClient"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
+    "Include": "EEPROM.h",
+    "Includepath": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/EEPROM"
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/AutoPlantWatering/build/sketch/AutoPlantWatering.ino.cpp",
     "Include": "",
     "Includepath": null
   },
@@ -156,6 +166,16 @@
   },
   {
     "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/ESP8266HTTPClient/src/ESP8266HTTPClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Documents/Arduino/libraries/NTPClient/NTPClient.cpp",
+    "Include": "",
+    "Includepath": null
+  },
+  {
+    "Sourcefile": "/Users/kevinhome/Library/Arduino15/packages/esp8266/hardware/esp8266/3.1.2/libraries/EEPROM/EEPROM.cpp",
     "Include": "",
     "Includepath": null
   },
