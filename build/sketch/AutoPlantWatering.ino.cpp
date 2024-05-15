@@ -45,17 +45,17 @@ void loadSensorData();
 void setup();
 #line 103 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loop();
-#line 114 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 119 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 int updateAndSendMoisture(int channel, string state, bool safetyFlag);
-#line 123 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 133 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void engageWatering(int channel, int pinNum);
-#line 150 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 163 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void sendJsonData(DynamicJsonDocument& doc);
-#line 160 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 173 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void updateSensor(int channel, int moisture, string state, bool safetyFlag);
-#line 169 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void sendData(int channel);
 #line 182 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+void sendData(int channel);
+#line 195 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 string getTime();
 #line 36 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void handlePost() {
@@ -112,7 +112,7 @@ void setup() {
   delay(1000);
   Serial.print("Connected Successfully to ");
   Serial.println(SECRET_WIFI);
-
+  delay(1000);
   EEPROM.begin(512);  // Ensure enough space is allocated
 
   server.on("/updateFlag", HTTP_POST, handlePost);  // Setup the path and handler
@@ -127,18 +127,28 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  Serial.println("1");
   loadSensorData();
+  Serial.println("2");
   delay(1000);
-  engageWatering(0, D3); // Call the watering function
+  //engageWatering(0, D3); // Call the watering function
   delay(1000);
-  engageWatering(1, D4);
+  digitalWrite(D3, LOW);
+  digitalWrite(D4, HIGH);
+  Serial.println("written");
+  //engageWatering(1, D4);
 
   delay(30000); // Wait for 30 seconds before calling the function again. Adjust as per your requirement.
 }
 
 int updateAndSendMoisture(int channel, string state, bool safetyFlag) {
+  Serial.println("3");
   int16_t adcValue = ads.readADC_SingleEnded(channel);// get new reading from pin
+  Serial.print("Sensor Reading: ");
+  Serial.println(adcValue);
   int moisturePercentage = map(adcValue, 448, 938, 100, 0);  // Assuming these are constants calculate moisture into a decimal
+  Serial.print("Moisture Reading: ");
+  Serial.println(moisturePercentage);
   updateSensor(channel, moisturePercentage, state, safetyFlag);
   sendData(channel);
   saveSensorData();
@@ -147,16 +157,19 @@ int updateAndSendMoisture(int channel, string state, bool safetyFlag) {
 
 void engageWatering(int channel, int pinNum) {
   if (sensors[channel].safetyFlag) {
+    Serial.print("Channel off: ");
+    Serial.println(channel);
     digitalWrite(pinNum, HIGH); // Disengage relay
     return;
   }
-  
+  Serial.print("Channel: ");
+  Serial.println(channel);
   int moisturePercentage = updateAndSendMoisture(channel, "off", false);
   int safetyTimer = 0;
 
   if (moisturePercentage <= 10 && !sensors[channel].safetyFlag) {
       digitalWrite(pinNum, LOW); // Engage relay
-      while (moisturePercentage <= 60 && safetyTimer <= 10) {
+      while (moisturePercentage <= 50 && safetyTimer <= 5) {
         delay(1000);
         safetyTimer++;
         moisturePercentage = updateAndSendMoisture(channel, "on", false); //recalculate moisture
@@ -165,7 +178,7 @@ void engageWatering(int channel, int pinNum) {
 
   digitalWrite(pinNum, HIGH); // Disengage relay
 
-  if (safetyTimer >= 10) {
+  if (safetyTimer >= 5) {
     sensors[channel].safetyFlag = true; // Set flag true here
     updateAndSendMoisture(channel, "off", sensors[channel].safetyFlag);
     sendData(channel);
