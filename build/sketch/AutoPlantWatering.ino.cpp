@@ -14,101 +14,13 @@
 #include <string>
 #include "./secrets.h"
 
-
-// const char* ssid = SECRET_WIFI;
-// const char* password = SECRET_PASS;
-// const char* serverUrl = SECRET_SERVER;
-// int safetyTimer = 0;
-
-
-// NTPClient timeClient(ntpUDP);
-
-
-// SensorData sensors[4];
-// ESP8266WebServer server(80);
-
-// /***        NOTES       **/
-// // Active is triggered by LOW
-// // D3 is GPIO 0
-
-
-// void handlePost() {
-//   if (server.hasArg("plain")) {
-//     String body = server.arg("plain");
-//     DynamicJsonDocument doc(1024);
-//     deserializeJson(doc, body);
-//     int sensorNumber = doc["sensorNumber"];
-//     bool safetyFlag = doc["safetyFlag"];
-
-//     sensors[sensorNumber].safetyFlag = safetyFlag;
-//     saveSensorData();
-//     server.send(200, "application/json", "{\"status\":\"received\"}");
-//   } else {
-//     server.send(500, "text/plain", "Server Error: Missing Data");
-//   }
-// }
-
-// void saveSensorData() {
-//     int startAddress = 0;
-//     for (int i = 0; i < 4; i++) {
-//         EEPROM.put(startAddress, sensors[i].sensorNumber);
-//         startAddress += sizeof(sensors[i].sensorNumber);
-//         EEPROM.put(startAddress, sensors[i].safetyFlag);
-//         startAddress += sizeof(sensors[i].safetyFlag);
-//     }
-//     EEPROM.commit();
-// }
-
-// void loadSensorData() {
-//     int startAddress = 0;
-//     for (int i = 0; i < 4; i++) {
-//         EEPROM.get(startAddress, sensors[i].sensorNumber);
-//         startAddress += sizeof(sensors[i].sensorNumber);
-//         EEPROM.get(startAddress, sensors[i].safetyFlag);
-//         startAddress += sizeof(sensors[i].safetyFlag);
-//     }
-// }
-
-// void setup() {
-//   Serial.begin(9600); // Initialize serial communication
-//   WiFi.begin(ssid, password);
-//   timeClient.begin();
-//   timeClient.update();
-
-//   configTime(0, 0, "pool.ntp.org"); // Initialize the time library to get the time
-
-
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(1000);
-//     Serial.println("Connecting to WiFi...");
-//   };
-  
-//   delay(1000);
-
-
-
-//   delay(1000);
-
-//   EEPROM.begin(512);  // Ensure enough space is allocated
-
-//   server.on("/updateFlag", HTTP_POST, handlePost);  // Setup the path and handler
-//   server.begin(); // Start the server
-//   Serial.print("HTTP server started");
-//   Serial.println(WiFi.localIP());
-
-//   ads.begin(0x48);
-//   pinMode(D3, OUTPUT); // Set the D3 pin as an output
-//   pinMode(D4, OUTPUT); // Set the D4 pin as an output
-//   pinMode(D5, OUTPUT); // Set the D4 pin as an output
-//   pinMode(D6, OUTPUT); // Set the D4 pin as an output
-// }
-
 Adafruit_ADS1015 ads;
 WiFiClient wifiClient;
 HTTPClient http;
 WiFiUDP ntpUDP;
 ESP8266WebServer server(80);
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
 const char* ssid = SECRET_WIFI;
 const char* password = SECRET_PASS;
 const char* serverUrl = SECRET_SERVER;
@@ -117,60 +29,82 @@ const unsigned long wateringInterval = 3000000;  // 50 minutes
 unsigned long startTime = 0;
 int safetyTimer = 0;
 
+void saveSensorData();
+void wifiConnect();
+void engageWateringProtocols();
+void engageWateringProtocol(int channel, int pinNum);
+void initiateWatering(int channel, int pinNum);
+void safetyCheck(int channel, unsigned long startTime, unsigned long endTime);
+int updateAndSendMoisture(int channel, const char* state, bool safetyFlag);
+void sendData(int channel);
+void updateSensor(int channel, int moisture, const char* state, bool safetyFlag);
+void getTime(char* buffer, size_t bufferSize);
+void clearEEPROM();
+
+#define MAX_DATE_LENGTH 20
+#define MAX_STATE_LENGTH 50
+
 struct SensorData {
     int sensorNumber;
     int moisture;
-    String date;
-    String state;
+    char date[MAX_DATE_LENGTH];
+    char state[MAX_STATE_LENGTH];
     bool safetyFlag;
 };
 
 SensorData sensors[4];
 
-#line 128 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 55 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void handlePost();
-#line 142 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void saveSensorData();
-#line 151 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 105 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loadSensorData();
-#line 160 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 114 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void adsBegin();
-#line 182 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void wifiConnect();
-#line 192 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 155 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void setup();
-#line 229 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 194 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void loop();
-#line 238 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void engageWateringProtocols();
-#line 248 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void engageWateringProtocol(int channel, int pinNum);
-#line 264 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void initiateWatering(int channel, int pinNum);
 #line 283 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void safetyCheck(int channel);
-#line 291 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-int updateAndSendMoisture(int channel, String state, bool safetyFlag);
-#line 308 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void sendJsonData(DynamicJsonDocument& doc);
-#line 322 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void updateSensor(int channel, int moisture, String state, bool safetyFlag);
-#line 331 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-void sendData(int channel);
-#line 344 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
-String getTime();
-#line 128 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+#line 55 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 void handlePost() {
+    // Check if the request contains body data
     if (!server.hasArg("plain")) {
         server.send(500, "text/plain", "Server Error: Missing Data");
         return;
     }
-    String body = server.arg("plain");
-    DynamicJsonDocument doc(1024);
-    deserializeJson(doc, body);
-    int sensorNumber = doc["sensorNumber"];
-    sensors[sensorNumber].safetyFlag = doc["safetyFlag"];
+
+    // Using a fixed buffer to hold the incoming JSON payload
+    const int BUFFER_SIZE = 1024;
+    char jsonBuffer[BUFFER_SIZE];
+
+    // Read the incoming request into the buffer
+    server.arg("plain").toCharArray(jsonBuffer, BUFFER_SIZE);
+
+    // Parse the JSON object from the buffer
+    StaticJsonDocument<BUFFER_SIZE> doc;
+    DeserializationError error = deserializeJson(doc, jsonBuffer);
+    
+    if (error) {
+        server.send(500, "text/plain", "Error parsing JSON");
+        return;
+    }
+
+    // Extract data from JSON document
+    int sensorNumber = doc["sensorNumber"]; // Assuming sensorNumber is always correctly provided
+    bool safetyFlag = doc["safetyFlag"]; // Assuming safetyFlag is always correctly provided
+
+    // Perform bounds checking on sensorNumber if necessary
+    if (sensorNumber < 0 || sensorNumber >= 4) {
+        server.send(500, "text/plain", "Invalid sensor number");
+        return;
+    }
+
+    // Set the sensor data from the JSON document
+    sensors[sensorNumber].safetyFlag = safetyFlag;
     saveSensorData();
+
+    // Send response back to client
     server.send(200, "application/json", "{\"status\":\"received\"}");
 }
 
@@ -197,7 +131,7 @@ void adsBegin() {
   unsigned long timeout = 10000;  // Set a timeout of 10000 milliseconds (10 seconds)
   
   Serial.println("Starting ADS initialization...");
-
+    delay(1000);
   // Attempt to initialize the ADS repeatedly until the timeout or initialization is successful
   while (!ads.begin(0x48)) {
     Serial.println("Failed to initialize ADS device, retrying...");
@@ -211,8 +145,17 @@ void adsBegin() {
 
   if (ads.begin(0x48)) {
     Serial.println("ADS device initialized successfully.");
+    wifiConnect();
   }
 }
+
+void clearEEPROM() {
+    for (int i = 0; i < 512; ++i) {  // Assume 512 bytes, adjust according to your EEPROM size
+        EEPROM.write(i, 0);
+    }
+    EEPROM.commit();  // Make sure to commit the changes to EEPROM
+}
+
 
 void wifiConnect() {
     WiFi.begin(ssid, password);
@@ -227,12 +170,14 @@ void wifiConnect() {
 void setup() {
     Wire.begin(D2, D1); // SDA, SCL on ESP8266
     Serial.begin(9600);
+    delay(500);
     adsBegin();
     delay(2000);
-    wifiConnect();
+    
 
     Serial.println("Initializing further components...");
     EEPROM.begin(512);
+    clearEEPROM();
 
     server.on("/updateFlag", HTTP_POST, handlePost);
     server.begin();
@@ -265,7 +210,7 @@ void loop() {
     server.handleClient();
     loadSensorData();
     Serial.println("Data Loaded");
-    if (millis() - lastWateringTime >= 100) {
+    if (millis() - lastWateringTime >= 3,600,000) { // 1 hour = 3,600,000ms
         engageWateringProtocols();
         lastWateringTime = millis();
     }
@@ -291,7 +236,6 @@ void engageWateringProtocol(int channel, int pinNum) {
     return;
   }
   initiateWatering(channel, pinNum);
-  safetyCheck(channel);
  
 }
 
@@ -306,33 +250,43 @@ void initiateWatering(int channel, int pinNum) {
         digitalWrite(pinNum, LOW); // Engage relay
         while (moisturePercentage <= 50 && millis() - startTime <= 100000) {  // 100 seconds
             delay(1000);
-            Serial.print("Waterting count: ");
-            Serial.println(millis() - startTime);
+            unsigned long currentTime = millis();
+            if (currentTime - startTime > 100000) {  // 100 seconds
+                Serial.println("Safety Timer Exceeded");
+                break; // Exit the loop if time exceeds 100 seconds
+            }
+            Serial.print("Watering count: ");
+            Serial.println(currentTime - startTime);
             moisturePercentage = updateAndSendMoisture(channel, "on", false); // Recalculate moisture
         }
     }
     digitalWrite(pinNum, HIGH); // Disengage relay
+    unsigned long endTime = millis();  // Capture the end time right after the loop
+    safetyCheck(channel, startTime, endTime);
 }
 
 
-void safetyCheck(int channel) {
-    if (millis() - startTime >= 100000) {  // 100 seconds
+void safetyCheck(int channel, unsigned long startTime, unsigned long endTime) {
+    unsigned long wateringDuration = endTime - startTime;
+    if (wateringDuration >= 100000) {  // 100 seconds
         sensors[channel].safetyFlag = true; // Set flag true here
         updateAndSendMoisture(channel, "off", sensors[channel].safetyFlag);
         sendData(channel);
     }
 }
 
-int updateAndSendMoisture(int channel, String state, bool safetyFlag) {
+int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
     Serial.print("Channel: ");
     Serial.println(channel);
     yield();  // Yield to maintain system health
     int16_t adcValue = ads.readADC_SingleEnded(channel);  // Get new reading from pin
-    Serial.print("ADC Value: ");
-    Serial.println(adcValue);
     yield();  // Yield to maintain system health
     int moisturePercentage = map(adcValue, 448, 938, 100, 0);  // Convert reading to percentage
+    Serial.print("Moisture: ");
+    Serial.print(moisturePercentage);
+    Serial.println("%");
     updateSensor(channel, moisturePercentage, state, safetyFlag);
+    Serial.println("Sensor Updated");
     yield();  // Yield before potentially blocking operations
     sendData(channel);
     saveSensorData();
@@ -340,12 +294,24 @@ int updateAndSendMoisture(int channel, String state, bool safetyFlag) {
 }
 
 
+
 void sendJsonData(DynamicJsonDocument& doc) {
-    String jsonObject;
-    serializeJson(doc, jsonObject);
+    const size_t bufferSize = 1024;  // Adjust size according to your expected JSON size
+    char jsonBuffer[bufferSize];
+
+    // Serialize JSON directly into the character buffer
+    size_t bytesWritten = serializeJson(doc, jsonBuffer, bufferSize);
+    if (bytesWritten == 0) {
+        Serial.println("Failed to serialize JSON");
+        return;
+    }
+
+    // Begin the HTTP request
     http.begin(wifiClient, serverUrl);
     http.addHeader("Content-Type", "application/json");
-    int httpResponseCode = http.POST(jsonObject);
+    
+    // Send the HTTP POST request
+    int httpResponseCode = http.POST(jsonBuffer);
     if (httpResponseCode != 200) {
         Serial.print("HTTP Request failed: ");
         Serial.println(httpResponseCode);
@@ -354,16 +320,20 @@ void sendJsonData(DynamicJsonDocument& doc) {
 }
 
 
-void updateSensor(int channel, int moisture, String state, bool safetyFlag) {
-  sensors[channel].sensorNumber = channel;
-  sensors[channel].moisture = moisture;
-  sensors[channel].date = getTime(); // Assuming getTime() returns a std::string
-  sensors[channel].state = state;
-  sensors[channel].safetyFlag = safetyFlag;
+void updateSensor(int channel, int moisture, const char* state, bool safetyFlag) {
+    Serial.println("Update Sensor");
+    sensors[channel].sensorNumber = channel;
+    sensors[channel].moisture = moisture;
+    getTime(sensors[channel].date, MAX_DATE_LENGTH);
+    strncpy(sensors[channel].state, state, MAX_STATE_LENGTH);
+    sensors[channel].state[MAX_STATE_LENGTH - 1] = '\0';  // Ensure null termination
+
+    sensors[channel].safetyFlag = safetyFlag;
 }
 
 
 void sendData(int channel) {
+    Serial.println("Send Data Function");
   DynamicJsonDocument doc(1024);
   JsonObject data = doc.createNestedObject("data");
   data["sensorNumber"] = sensors[channel].sensorNumber;
@@ -376,10 +346,8 @@ void sendData(int channel) {
 }
 
 
-String getTime() {
-    time_t now = time(nullptr); // Get current time
+void getTime(char* buffer, size_t bufferSize) {
+    time_t now = time(nullptr);  // Get current time
     struct tm* timeinfo = localtime(&now);
-    char buffer[80];
-    strftime(buffer, sizeof(buffer), "%m-%d-%Y %H:%M:%S", timeinfo);
-    return String(buffer);
+    strftime(buffer, bufferSize, "%d-%m-%Y %H:%M:%S", timeinfo);
 }
