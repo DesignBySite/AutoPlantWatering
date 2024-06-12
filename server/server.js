@@ -6,8 +6,10 @@ let clients = [];
 app.use(express.json()); // Middleware to parse JSON bodies
 
 app.post('/data', (req, res) => {
-  console.log('Data received:', req.body);
   const newData = req.body; // Assume data comes in the request body
+  let currentTime = getCurrentTime();
+  // Update your data here
+  console.log("Current Time: ", currentTime, "Data: ", newData);
   updateDataAndNotifyClients(newData);
   res.status(200).send('Data received successfully');
 });
@@ -27,9 +29,11 @@ app.get('/events', (req, res) => {
   });
 });
 
+const getCurrentTime = () => {
+  let now = new Date();
+  return `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`
+}
 const updateDataAndNotifyClients = (data) => {
-  // Update your data here
-  console.log('Data updated:', data);
 
   // Notify all clients
   clients.forEach(client => {
@@ -38,6 +42,7 @@ const updateDataAndNotifyClients = (data) => {
 }
 
 const sendSensorData = (ipAddress, sensorNumber, safetyFlag, portNum) => {
+  console.log("Sent Sensor Data: ", ipAddress, sensorNumber, safetyFlag, portNum);
   const data = JSON.stringify({
     sensorNumber: sensorNumber,
     safetyFlag: safetyFlag
@@ -70,8 +75,10 @@ const sendSensorData = (ipAddress, sensorNumber, safetyFlag, portNum) => {
   req.end();
 }
 
-sendSensorData('10.0.0.235', 0, false, 80);
-sendSensorData('10.0.0.235', 1, false, 80);
+// sendSensorData('10.0.0.235', 0, false, 80);
+// sendSensorData('10.0.0.235', 1, false, 80);
+// sendSensorData('10.0.0.235', 2, false, 80);
+// sendSensorData('10.0.0.235', 3, false, 80);
 
 const PORT = 3050;
 app.listen(PORT, () => {
