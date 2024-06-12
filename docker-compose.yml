@@ -1,0 +1,33 @@
+version: '3'
+services:
+  nginx:
+    restart: always
+    image: 'nginx:latest'
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:3051'
+    depends_on:
+      - api
+      - client
+  api:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      - '/app/node_modules'
+      - './server:/app'
+    environment:
+      - MONGO_USER=knielsen0506
+      - MONGO_PASSWORD=nrpxKReM84!!
+    command: npm run start
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - '/app/node_modules'
+      - './client:/app'
+    command: npm run start
+    tty: true
