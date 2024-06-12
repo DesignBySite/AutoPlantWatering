@@ -10,6 +10,7 @@
 #include <time.h>
 #include <Wire.h>
 #include <string>
+#include <numeric>
 #include "./secrets.h"
 
 Adafruit_ADS1015 ads;
@@ -23,7 +24,8 @@ const char* ssid = SECRET_WIFI;
 const char* password = SECRET_PASS;
 const char* serverUrl = SECRET_SERVER;
 unsigned long lastWateringTime = 0;
-const unsigned long wateringInterval = 3000000;  // 50 minutes
+unsigned long lastServerCheckTime = 0;
+const unsigned long serverCheckInterval = 300000; // 5 minutes
 unsigned long startTime = 0;
 int safetyTimer = 0;
 
@@ -34,7 +36,7 @@ void engageWateringProtocol(int channel, int pinNum);
 void initiateWatering(int channel, int pinNum);
 void safetyCheck(int channel, unsigned long startTime, unsigned long endTime);
 int updateAndSendMoisture(int channel, const char* state, bool safetyFlag);
-void sendData(int channel);
+void sendData(int channel, const char* message = nullptr);
 void updateSensor(int channel, int moisture, const char* state, bool safetyFlag);
 void getTime(char* buffer, size_t bufferSize);
 void clearEEPROM();
@@ -188,16 +190,26 @@ void setup() {
         Serial.println("Waiting for time...");
         delay(1000);
     }
+    Serial.println("Done");
 }
 
 
 void loop() {
-    server.handleClient();
-    loadSensorData();
-    Serial.println("Data Loaded");
-    if (millis() - lastWateringTime >= 3,600,000) { // 1 hour = 3,600,000ms
+
+    if (millis() - lastServerCheckTime >= serverCheckInterval) {
+        sendData(0, "Server Check");
+        server.handleClient();
+        lastServerCheckTime = millis();
+    }
+    
+      // Get new reading from pin
+    if (millis() - lastWateringTime >= 3600000) { // 1 hour = 3,600,000ms
+        server.handleClient();
+        loadSensorData();
+        Serial.println("Data Loaded");
         engageWateringProtocols();
         lastWateringTime = millis();
+        saveSensorData();
     }
 }
 void engageWateringProtocols() {
@@ -213,6 +225,7 @@ void engageWateringProtocols() {
 void engageWateringProtocol(int channel, int pinNum) {
     Serial.println("Engaging Water Protocols");
     Serial.print("Channel: ");
+    sendData(channel, "Watering Protocol Started");
     Serial.println(channel);
   if (sensors[channel].safetyFlag) {
     Serial.print("Safety Flag for Channel: ");
@@ -226,26 +239,47 @@ void engageWateringProtocol(int channel, int pinNum) {
 
 
 void initiateWatering(int channel, int pinNum) {
-    Serial.println("Initiate Watering");
     int moisturePercentage = updateAndSendMoisture(channel, "off", false);
+    sendData(channel, "Inside initiateWatering");
     unsigned long startTime = millis();
+    unsigned long lastSendTime = millis();
 
     if (moisturePercentage <= 10 && !sensors[channel].safetyFlag) {
-        Serial.println("Watering");
+        moisturePercentage = updateAndSendMoisture(channel, "on", false);
+        sendData(channel, "Inside if statement");
         digitalWrite(pinNum, LOW); // Engage relay
-        while (moisturePercentage <= 50 && millis() - startTime <= 100000) {  // 100 seconds
-            delay(1000);
+
+        // Wait for 8 minutes before stopping the relay
+        while (millis() - startTime <= 500000) {  // 8 minutes
             unsigned long currentTime = millis();
-            if (currentTime - startTime > 100000) {  // 100 seconds
-                Serial.println("Safety Timer Exceeded");
-                break; // Exit the loop if time exceeds 100 seconds
+           
+            if (millis() - lastSendTime >= 60000) {
+                sendData(channel, "Inside while loop and actively watering");
+                lastSendTime = millis();
             }
-            Serial.print("Watering count: ");
-            Serial.println(currentTime - startTime);
+
+            delay(1000);
+
+
+            if (currentTime - startTime > 500000) {  // 8 minutes
+                Serial.println("Safety Timer Exceeded");
+                sendData(channel, "Safety Timer Exceeded");
+                break; // Exit the loop if time exceeds 8 minutes
+            }
+
+            if (moisturePercentage > 40) {
+                sendData(channel, "Moisture level sufficient, stopping watering.");
+                break;
+            }
+            
             moisturePercentage = updateAndSendMoisture(channel, "on", false); // Recalculate moisture
+            Serial.print("Moisture Percentage: ");
+            Serial.println(moisturePercentage);
         }
     }
     digitalWrite(pinNum, HIGH); // Disengage relay
+    moisturePercentage = updateAndSendMoisture(channel, "off", false);
+    sendData(channel, "Outside while loop, no longer watering");
     unsigned long endTime = millis();  // Capture the end time right after the loop
     safetyCheck(channel, startTime, endTime);
 }
@@ -253,7 +287,7 @@ void initiateWatering(int channel, int pinNum) {
 
 void safetyCheck(int channel, unsigned long startTime, unsigned long endTime) {
     unsigned long wateringDuration = endTime - startTime;
-    if (wateringDuration >= 100000) {  // 100 seconds
+    if (wateringDuration >= 5000000) {  // 100 seconds
         sensors[channel].safetyFlag = true; // Set flag true here
         updateAndSendMoisture(channel, "off", sensors[channel].safetyFlag);
         sendData(channel);
@@ -265,16 +299,19 @@ int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
     Serial.println(channel);
     yield();  // Yield to maintain system health
     int16_t adcValue = ads.readADC_SingleEnded(channel);  // Get new reading from pin
+    if (adcValue == 0) {
+        while (adcValue == 0) {
+            adcValue = ads.readADC_SingleEnded(channel);
+        };
+    }
     yield();  // Yield to maintain system health
-    int moisturePercentage = map(adcValue, 448, 938, 100, 0);  // Convert reading to percentage
+    int moisturePercentage = map(adcValue, 100, 938, 100, 0);  // Convert reading to percentage
     Serial.print("Moisture: ");
     Serial.print(moisturePercentage);
     Serial.println("%");
     updateSensor(channel, moisturePercentage, state, safetyFlag);
     Serial.println("Sensor Updated");
     yield();  // Yield before potentially blocking operations
-    sendData(channel);
-    saveSensorData();
     return moisturePercentage;
 }
 
@@ -317,15 +354,15 @@ void updateSensor(int channel, int moisture, const char* state, bool safetyFlag)
 }
 
 
-void sendData(int channel) {
-    Serial.println("Send Data Function");
-  DynamicJsonDocument doc(1024);
-  JsonObject data = doc.createNestedObject("data");
-  data["sensorNumber"] = sensors[channel].sensorNumber;
-  data["moisture"] = sensors[channel].moisture;
-  data["date"] = sensors[channel].date;
-  data["state"] = sensors[channel].state;
-  data["safetyFlag"] = sensors[channel].safetyFlag;
+void sendData(int channel, const char* message) {
+    DynamicJsonDocument doc(1024);
+    JsonObject data = doc.createNestedObject("data");
+    data["message"] = message;
+    data["sensorNumber"] = sensors[channel].sensorNumber;
+    data["moisture"] = sensors[channel].moisture;
+    data["date"] = sensors[channel].date;
+    data["state"] = sensors[channel].state;
+    data["safetyFlag"] = sensors[channel].safetyFlag;
 
   sendJsonData(doc);  // Assuming this function sends the JSON to your server
 }
@@ -334,5 +371,5 @@ void sendData(int channel) {
 void getTime(char* buffer, size_t bufferSize) {
     time_t now = time(nullptr);  // Get current time
     struct tm* timeinfo = localtime(&now);
-    strftime(buffer, bufferSize, "%d-%m-%Y %H:%M:%S", timeinfo);
+    strftime(buffer, bufferSize, "%m-%d-%Y", timeinfo);
 }
