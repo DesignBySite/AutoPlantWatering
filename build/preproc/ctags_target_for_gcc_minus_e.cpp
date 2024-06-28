@@ -12,9 +12,10 @@
 # 12 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 # 13 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 # 14 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
+# 15 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino" 2
 
 
-# 15 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
+# 16 "/Users/kevinhome/AutoPlantWatering/AutoPlantWatering.ino"
 Adafruit_ADS1015 ads;
 WiFiClient wifiClient;
 HTTPClient http;
@@ -26,7 +27,8 @@ const char* ssid = "Kevin Home 2.4";
 const char* password = "nrpxKReM84!!";
 const char* serverUrl = "http://10.0.0.252:3050/data";
 unsigned long lastWateringTime = 0;
-const unsigned long wateringInterval = 3000000; // 50 minutes
+unsigned long lastServerCheckTime = 0;
+const unsigned long serverCheckInterval = 300000; // 5 minutes
 unsigned long startTime = 0;
 int safetyTimer = 0;
 
@@ -35,9 +37,12 @@ void wifiConnect();
 void engageWateringProtocols();
 void engageWateringProtocol(int channel, int pinNum);
 void initiateWatering(int channel, int pinNum);
-void safetyCheck(int channel, unsigned long startTime, unsigned long endTime);
+void engageWatering(int channel, int pinNum);
+void disengageWatering(int channel, int pinNum);
 int updateAndSendMoisture(int channel, const char* state, bool safetyFlag);
-void sendData(int channel);
+int readUntilValid(int channel);
+int calculateMoisturePercentage(int adcValue);
+void sendData(int channel, const char* message = nullptr);
 void updateSensor(int channel, int moisture, const char* state, bool safetyFlag);
 void getTime(char* buffer, size_t bufferSize);
 void clearEEPROM();
@@ -50,7 +55,6 @@ struct SensorData {
     int moisture;
     char date[20];
     char state[50];
-    bool safetyFlag;
 };
 
 SensorData sensors[4];
@@ -80,7 +84,6 @@ void handlePost() {
 
     // Extract data from JSON document
     int sensorNumber = doc["sensorNumber"]; // Assuming sensorNumber is always correctly provided
-    bool safetyFlag = doc["safetyFlag"]; // Assuming safetyFlag is always correctly provided
 
     // Perform bounds checking on sensorNumber if necessary
     if (sensorNumber < 0 || sensorNumber >= 4) {
@@ -89,7 +92,6 @@ void handlePost() {
     }
 
     // Set the sensor data from the JSON document
-    sensors[sensorNumber].safetyFlag = safetyFlag;
     saveSensorData();
 
     // Send response back to client
@@ -191,96 +193,132 @@ void setup() {
         Serial.println("Waiting for time...");
         delay(1000);
     }
+    Serial.println("Done");
 }
 
 
 void loop() {
-    server.handleClient();
-    loadSensorData();
-    Serial.println("Data Loaded");
-    if (millis() - lastWateringTime >= 3,600,000) { // 1 hour = 3,600,000ms
+
+    if (millis() - lastServerCheckTime >= serverCheckInterval) {
+        server.handleClient();
+        lastServerCheckTime = millis();
+    }
+
+    if (millis() - lastWateringTime >= 1800000) { // 1 hour = 3,600,000ms 
+      // Get new reading from pin
+        sendData(0, "30 Minutes has elapsed");
+        server.handleClient();
+        loadSensorData();
+        Serial.println("Data Loaded");
         engageWateringProtocols();
         lastWateringTime = millis();
+        saveSensorData();
     }
 }
 void engageWateringProtocols() {
-    engageWateringProtocol(0, D3);
-    delay(2000); // Delay for 2 seconds before next channel engages
-    engageWateringProtocol(1, D4);
-    delay(2000); // Repeat as needed
-    engageWateringProtocol(2, D5);
-    delay(2000);
-    engageWateringProtocol(3, D6);
+    int channels[] = {D3, D4, D5, D6}; // Array of pin numbers for each channel
+    int numChannels = sizeof(channels) / sizeof(channels[0]); // Calculate the number of channels
+
+    for (int i = 0; i < numChannels; i++) {
+        if (i == 1) { // Skip channel 1
+            continue; // Skip the rest of the loop body and move to the next iteration
+        }
+        engageWateringProtocol(i, channels[i]); // Engage watering protocol for the current channel
+        delay(2000); // Delay for 2 seconds before engaging the next channel
+    }
 }
 
 void engageWateringProtocol(int channel, int pinNum) {
+    updateAndSendMoisture(channel, "off", false);
     Serial.println("Engaging Water Protocols");
     Serial.print("Channel: ");
-    Serial.println(channel);
-  if (sensors[channel].safetyFlag) {
-    Serial.print("Safety Flag for Channel: ");
-    Serial.println(channel);
-    digitalWrite(pinNum, 0x1); // Disengage relay
-    return;
-  }
-  initiateWatering(channel, pinNum);
-
+    sendData(channel, "Watering Protocol Entered");
+    initiateWatering(channel, pinNum);
 }
 
-
+const unsigned long WATERING_TIME_MS = 60000; // Time to water in milliseconds
+const int MOISTURE_THRESHOLD = 10; // Moisture level threshold
 void initiateWatering(int channel, int pinNum) {
-    Serial.println("Initiate Watering");
     int moisturePercentage = updateAndSendMoisture(channel, "off", false);
-    unsigned long startTime = millis();
+    Serial.print("moisture percent line 243: ");
+    Serial.println(moisturePercentage);
+    sendData(channel, "Inside Initiate Watering");
 
-    if (moisturePercentage <= 10 && !sensors[channel].safetyFlag) {
-        Serial.println("Watering");
-        digitalWrite(pinNum, 0x0); // Engage relay
-        while (moisturePercentage <= 50 && millis() - startTime <= 100000) { // 100 seconds
-            delay(1000);
-            unsigned long currentTime = millis();
-            if (currentTime - startTime > 100000) { // 100 seconds
-                Serial.println("Safety Timer Exceeded");
-                break; // Exit the loop if time exceeds 100 seconds
-            }
-            Serial.print("Watering count: ");
-            Serial.println(currentTime - startTime);
-            moisturePercentage = updateAndSendMoisture(channel, "on", false); // Recalculate moisture
-        }
-    }
-    digitalWrite(pinNum, 0x1); // Disengage relay
-    unsigned long endTime = millis(); // Capture the end time right after the loop
-    safetyCheck(channel, startTime, endTime);
+    if (moisturePercentage > MOISTURE_THRESHOLD) {
+        sendData(channel, "moisture above 10%, not watering");
+        return;
+    };
+
+    engageWatering(channel, pinNum);
+    disengageWatering(channel, pinNum);
 }
 
+void engageWatering(int channel, int pinNum) {
+    unsigned long startTime = millis();
+    bool dataSent = false;
 
-void safetyCheck(int channel, unsigned long startTime, unsigned long endTime) {
-    unsigned long wateringDuration = endTime - startTime;
-    if (wateringDuration >= 100000) { // 100 seconds
-        sensors[channel].safetyFlag = true; // Set flag true here
-        updateAndSendMoisture(channel, "off", sensors[channel].safetyFlag);
-        sendData(channel);
+    updateAndSendMoisture(channel, "on", false);
+    sendData(channel, "Beginning to water");
+    digitalWrite(pinNum, 0x0); // Engage relay
+
+    while (millis() - startTime <= WATERING_TIME_MS) {
+        if (!dataSent) {
+            sendData(channel, "Inside while loop and actively watering");
+            dataSent = true;
+        }
+        delay(1000); // Maintain a delay to avoid a busy loop
     }
+}
+
+void disengageWatering(int channel, int pinNum) {
+    updateAndSendMoisture(channel, "off", false);
+    digitalWrite(pinNum, 0x1); // Disengage relay
+    sendData(channel, "Outside while loop, no longer watering");
 }
 
 int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
     Serial.print("Channel: ");
     Serial.println(channel);
-    yield(); // Yield to maintain system health
-    int16_t adcValue = ads.readADC_SingleEnded(channel); // Get new reading from pin
-    yield(); // Yield to maintain system health
-    int moisturePercentage = map(adcValue, 448, 938, 100, 0); // Convert reading to percentage
+    yield(); // Allow other processes to run, useful in multitasking environments
+
+    int adcValue = ads.readADC_SingleEnded(channel); // Read ADC value once
+    if (adcValue < 100) { // Ensure ADC value is above threshold
+        adcValue = readUntilValid(channel);
+    }
+
+    // Debug ADC value based on state
+    if (strcmp(state, "on") == 0 || strcmp(state, "off") == 0) {
+        Serial.print("ADCVALUE: ");
+        Serial.println(adcValue);
+        if (strcmp(state, "on") == 0) {
+            Serial.println("State is on");
+        }
+    }
+
+    yield(); // Another yield to maintain system responsiveness
+    int moisturePercentage = calculateMoisturePercentage(adcValue);
+    delay(100); // Short delay for system stability
+
     Serial.print("Moisture: ");
     Serial.print(moisturePercentage);
     Serial.println("%");
     updateSensor(channel, moisturePercentage, state, safetyFlag);
     Serial.println("Sensor Updated");
-    yield(); // Yield before potentially blocking operations
-    sendData(channel);
-    saveSensorData();
+
     return moisturePercentage;
 }
 
+int readUntilValid(int channel) {
+    int adcValue;
+    do {
+        adcValue = ads.readADC_SingleEnded(channel);
+    } while (adcValue < 100);
+    return adcValue;
+}
+
+int calculateMoisturePercentage(int adcValue) {
+    return map(adcValue, 438, 938, 100, 0) - 20;
+}
 
 
 void sendJsonData(DynamicJsonDocument& doc) {
@@ -315,20 +353,17 @@ void updateSensor(int channel, int moisture, const char* state, bool safetyFlag)
     getTime(sensors[channel].date, 20);
     strncpy(sensors[channel].state, state, 50);
     sensors[channel].state[50 - 1] = '\0'; // Ensure null termination
-
-    sensors[channel].safetyFlag = safetyFlag;
 }
 
 
-void sendData(int channel) {
-    Serial.println("Send Data Function");
-  DynamicJsonDocument doc(1024);
-  JsonObject data = doc.createNestedObject("data");
-  data["sensorNumber"] = sensors[channel].sensorNumber;
-  data["moisture"] = sensors[channel].moisture;
-  data["date"] = sensors[channel].date;
-  data["state"] = sensors[channel].state;
-  data["safetyFlag"] = sensors[channel].safetyFlag;
+void sendData(int channel, const char* message) {
+    DynamicJsonDocument doc(1024);
+    JsonObject data = doc.createNestedObject("data");
+    data["message"] = message;
+    data["sensorNumber"] = sensors[channel].sensorNumber;
+    data["moisture"] = sensors[channel].moisture;
+    data["date"] = sensors[channel].date;
+    data["state"] = sensors[channel].state;
 
   sendJsonData(doc); // Assuming this function sends the JSON to your server
 }
@@ -337,5 +372,5 @@ void sendData(int channel) {
 void getTime(char* buffer, size_t bufferSize) {
     time_t now = time(nullptr); // Get current time
     struct tm* timeinfo = localtime(&now);
-    strftime(buffer, bufferSize, "%d-%m-%Y %H:%M:%S", timeinfo);
+    strftime(buffer, bufferSize, "%m-%d-%Y", timeinfo);
 }
