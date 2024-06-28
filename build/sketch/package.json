@@ -1,0 +1,6 @@
+#line 1 "/Users/kevinhome/AutoPlantWatering/package.json"
+{
+  "dependencies": {
+    "docker-compose": "^0.24.8"
+  }
+}
