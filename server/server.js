@@ -78,7 +78,7 @@ const sendSensorData = (ipAddress, sensorNumber, safetyFlag, portNum) => {
 // sendSensorData('10.0.0.235', 0, false, 80);
 // sendSensorData('10.0.0.235', 1, false, 80);
 // sendSensorData('10.0.0.235', 2, false, 80);
-// sendSensorData('10.0.0.235', 3, false, 80);
+sendSensorData('10.0.0.235', 3, false, 80);
 
 const PORT = 3050;
 app.listen(PORT, () => {
