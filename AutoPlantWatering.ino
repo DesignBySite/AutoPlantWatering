@@ -28,6 +28,7 @@ unsigned long lastServerCheckTime = 0;
 const unsigned long serverCheckInterval = 300000; // 5 minutes
 unsigned long startTime = 0;
 int safetyTimer = 0;
+int channelAddBy = 0;
 
 void saveSensorData();
 void wifiConnect();
@@ -201,8 +202,7 @@ void loop() {
         lastServerCheckTime = millis();
     }
     
-    if (millis() - lastWateringTime >= 1800000) { // 1 hour = 3,600,000ms 
-      // Get new reading from pin
+    if (millis() - lastWateringTime >= 1800000) { // 1 hour = 3,600,000ms 24 hours is 86400000
         sendData(0, "30 Minutes has elapsed");
         server.handleClient();
         loadSensorData();
@@ -210,6 +210,7 @@ void loop() {
         engageWateringProtocols();
         lastWateringTime = millis();
         saveSensorData();
+      // Get new reading from pin
     }
 }
 void engageWateringProtocols() {
@@ -217,19 +218,17 @@ void engageWateringProtocols() {
     int numChannels = sizeof(channels) / sizeof(channels[0]); // Calculate the number of channels
 
     for (int i = 0; i < numChannels; i++) {
-        if (i == 1) { // Skip channel 1
-            continue; // Skip the rest of the loop body and move to the next iteration
-        }
         engageWateringProtocol(i, channels[i]); // Engage watering protocol for the current channel
         delay(2000); // Delay for 2 seconds before engaging the next channel
     }
 }
 
 void engageWateringProtocol(int channel, int pinNum) {
+    int channelAdd = channel + channelAddBy;
     updateAndSendMoisture(channel, "off", false);
     Serial.println("Engaging Water Protocols");
     Serial.print("Channel: ");
-    sendData(channel, "Watering Protocol Entered");
+    sendData(channelAdd, "Watering Protocol Entered");
     initiateWatering(channel, pinNum);
 }
 
@@ -239,10 +238,11 @@ void initiateWatering(int channel, int pinNum) {
     int moisturePercentage = updateAndSendMoisture(channel, "off", false);
     Serial.print("moisture percent line 243: ");
     Serial.println(moisturePercentage);
-    sendData(channel, "Inside Initiate Watering");
+    int sumChannel = channel + channelAddBy;
+    sendData(sumChannel, "Inside Initiate Watering");
 
     if (moisturePercentage > MOISTURE_THRESHOLD) {
-        sendData(channel, "moisture above 10%, not watering");
+        sendData(sumChannel, "moisture above 10%, not watering");
         return;
     };
 
@@ -253,24 +253,26 @@ void initiateWatering(int channel, int pinNum) {
 void engageWatering(int channel, int pinNum) {
     unsigned long startTime = millis();
     bool dataSent = false;
-    
+    int sumChannel = channel + channelAddBy;
     updateAndSendMoisture(channel, "on", false);
-    sendData(channel, "Beginning to water");
+    sendData(sumChannel, "Beginning to water");
     digitalWrite(pinNum, LOW); // Engage relay
 
     while (millis() - startTime <= WATERING_TIME_MS) {
         if (!dataSent) {
-            sendData(channel, "Inside while loop and actively watering");
+            sendData(sumChannel, "Inside while loop and actively watering");
             dataSent = true;
         }
+        updateAndSendMoisture(channel, "on", false);
         delay(1000);  // Maintain a delay to avoid a busy loop
     }
 }
 
 void disengageWatering(int channel, int pinNum) {
+    int sumChannel = channel + channelAddBy;
     updateAndSendMoisture(channel, "off", false);
     digitalWrite(pinNum, HIGH); // Disengage relay
-    sendData(channel, "Outside while loop, no longer watering");
+    sendData(sumChannel, "Outside while loop, no longer watering");
 }
 
 int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
@@ -356,11 +358,12 @@ void updateSensor(int channel, int moisture, const char* state, bool safetyFlag)
 void sendData(int channel, const char* message) {
     DynamicJsonDocument doc(1024);
     JsonObject data = doc.createNestedObject("data");
+    int newChannel = channel - channelAddBy;
     data["message"] = message;
-    data["sensorNumber"] = sensors[channel].sensorNumber;
-    data["moisture"] = sensors[channel].moisture;
-    data["date"] = sensors[channel].date;
-    data["state"] = sensors[channel].state;
+    data["sensorNumber"] = channel;
+    data["moisture"] = sensors[newChannel].moisture;
+    data["date"] = sensors[newChannel].date;
+    data["state"] = sensors[newChannel].state;
 
   sendJsonData(doc);  // Assuming this function sends the JSON to your server
 }
