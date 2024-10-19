@@ -17,6 +17,7 @@ function App() {
 
   return (
     <div>
+      <p>Messages</p>
       {messages.map((msg, index) => (
         <div key={index}>{msg.message}</div>
       ))}

@@ -24,8 +24,9 @@ const char* ssid = SECRET_WIFI;
 const char* password = SECRET_PASS;
 const char* serverUrl = SECRET_SERVER;
 unsigned long lastWateringTime = 0;
-unsigned long lastServerCheckTime = 0;
-const unsigned long serverCheckInterval = 300000; // 5 minutes
+unsigned long wateringTimer = 1800000; // 1 hour = 3,600,000ms 24 hours is 86400000, set to 1,800,000 for 30 minutes and 2,100,000 for 35 minutes
+const unsigned long WATERING_TIME_MS = 60000;  // Time to water in milliseconds
+const int MOISTURE_THRESHOLD = 10;             // Moisture level threshold
 unsigned long startTime = 0;
 int safetyTimer = 0;
 int channelAddBy = 0;
@@ -81,13 +82,20 @@ void handlePost() {
     }
 
     // Extract data from JSON document
-    int sensorNumber = doc["sensorNumber"]; // Assuming sensorNumber is always correctly provided
+    int sensorNumber = doc["sensorNumber"];
+    int moisture = doc["moisture"];
+    const char* state = doc["state"];
+    bool safetyFlag = doc["safetyFlag"]; // Assuming safetyFlag is part of your JSON
+
 
     // Perform bounds checking on sensorNumber if necessary
-    if (sensorNumber < 0 || sensorNumber >= 4) {
-        server.send(500, "text/plain", "Invalid sensor number");
-        return;
-    }
+    // if (sensorNumber < 0 || sensorNumber >= 4) {
+    //     server.send(500, "text/plain", "Invalid sensor number");
+    //     return;
+    // }
+
+    // Update the sensor data using updateSensor()
+    updateSensor(sensorNumber, moisture, state, safetyFlag);
 
     // Set the sensor data from the JSON document
     saveSensorData();
@@ -115,44 +123,39 @@ void loadSensorData() {
 }
 
 void adsBegin() {
-  unsigned long startTime = millis();  // Record the start time
-  unsigned long timeout = 10000;  // Set a timeout of 10000 milliseconds (10 seconds)
-  
-  Serial.println("Starting ADS initialization...");
+    unsigned long startTime = millis();  // Record the start time
+    unsigned long timeout = 10000;  // Set a timeout of 10000 milliseconds (10 seconds)
+    
+    Serial.println("Starting ADS initialization...");
     delay(1000);
-  // Attempt to initialize the ADS repeatedly until the timeout or initialization is successful
-  while (!ads.begin(0x48)) {
-    Serial.println("Failed to initialize ADS device, retrying...");
-    delay(500);  // Delay between retries to prevent flooding the I2C bus
+    // Attempt to initialize the ADS repeatedly until the timeout or initialization is successful
+    while (!ads.begin(0x48)) {
+        Serial.println("Failed to initialize ADS device, retrying...");
+        delay(500);  // Delay between retries to prevent flooding the I2C bus
 
-    if (millis() - startTime > timeout) {
-      Serial.println("Failed to initialize ADS device after 10 seconds.");
-      break;  // Break the loop if the timeout is exceeded
+        if (millis() - startTime > timeout) {
+        Serial.println("Failed to initialize ADS device after 10 seconds.");
+        break;  // Break the loop if the timeout is exceeded
+        }
     }
-  }
 
-  if (ads.begin(0x48)) {
-    Serial.println("ADS device initialized successfully.");
-    wifiConnect();
-  }
-}
-
-void clearEEPROM() {
-    for (int i = 0; i < 512; ++i) {  // Assume 512 bytes, adjust according to your EEPROM size
-        EEPROM.write(i, 0);
+    if (millis() - startTime <= timeout) {
+        Serial.println("ADS device initialized successfully.");
+    } else {
+        Serial.println("ADS device failed to initialize.");
     }
-    EEPROM.commit();  // Make sure to commit the changes to EEPROM
 }
-
 
 void wifiConnect() {
     WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi...");
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
-        Serial.println("Connecting to WiFi...");
+        Serial.print(".");
     }
+    Serial.println();
     Serial.print("Connected Successfully to ");
-    Serial.println(SECRET_WIFI);
+    Serial.println(ssid);
 }
 
 void setup() {
@@ -160,12 +163,12 @@ void setup() {
     Serial.begin(9600);
     delay(500);
     adsBegin();
+    wifiConnect();
     delay(2000);
     
 
     Serial.println("Initializing further components...");
     EEPROM.begin(512);
-    clearEEPROM();
 
     server.on("/updateFlag", HTTP_POST, handlePost);
     server.begin();
@@ -191,30 +194,25 @@ void setup() {
         Serial.println("Waiting for time...");
         delay(1000);
     }
-    Serial.println("Done");
+    Serial.println("Time synchronized");
 }
 
 
 void loop() {
 
-    if (millis() - lastServerCheckTime >= serverCheckInterval) {
-        server.handleClient();
-        lastServerCheckTime = millis();
-    }
+    server.handleClient();
     
-    if (millis() - lastWateringTime >= 1800000) { // 1 hour = 3,600,000ms 24 hours is 86400000
+    if (millis() - lastWateringTime >= wateringTimer) {
         sendData(0, "30 Minutes has elapsed");
-        server.handleClient();
         loadSensorData();
         Serial.println("Data Loaded");
         engageWateringProtocols();
         lastWateringTime = millis();
         saveSensorData();
-      // Get new reading from pin
     }
 }
 void engageWateringProtocols() {
-    int channels[] = {D3, D4, D5, D6}; // Array of pin numbers for each channel
+    uint8_t channels[] = {D3, D4, D5, D6}; // Array of pin numbers for each channel
     int numChannels = sizeof(channels) / sizeof(channels[0]); // Calculate the number of channels
 
     for (int i = 0; i < numChannels; i++) {
@@ -224,25 +222,20 @@ void engageWateringProtocols() {
 }
 
 void engageWateringProtocol(int channel, int pinNum) {
-    int channelAdd = channel + channelAddBy;
     updateAndSendMoisture(channel, "off", false);
     Serial.println("Engaging Water Protocols");
-    Serial.print("Channel: ");
-    sendData(channelAdd, "Watering Protocol Entered");
+    sendData(channel + channelAddBy, "Watering Protocol Entered");
     initiateWatering(channel, pinNum);
 }
 
-const unsigned long WATERING_TIME_MS = 60000;  // Time to water in milliseconds
-const int MOISTURE_THRESHOLD = 10;             // Moisture level threshold
 void initiateWatering(int channel, int pinNum) {
     int moisturePercentage = updateAndSendMoisture(channel, "off", false);
-    Serial.print("moisture percent line 243: ");
+    Serial.print("Moisture percentage: ");
     Serial.println(moisturePercentage);
-    int sumChannel = channel + channelAddBy;
-    sendData(sumChannel, "Inside Initiate Watering");
+    sendData(channel + channelAddBy, "Inside Initiate Watering");
 
     if (moisturePercentage > MOISTURE_THRESHOLD) {
-        sendData(sumChannel, "moisture above 10%, not watering");
+        sendData(channel + channelAddBy, "moisture above 10%, not watering");
         return;
     };
 
@@ -253,14 +246,13 @@ void initiateWatering(int channel, int pinNum) {
 void engageWatering(int channel, int pinNum) {
     unsigned long startTime = millis();
     bool dataSent = false;
-    int sumChannel = channel + channelAddBy;
     updateAndSendMoisture(channel, "on", false);
-    sendData(sumChannel, "Beginning to water");
+    sendData(channel + channelAddBy, "Beginning to water");
     digitalWrite(pinNum, LOW); // Engage relay
 
     while (millis() - startTime <= WATERING_TIME_MS) {
         if (!dataSent) {
-            sendData(sumChannel, "Inside while loop and actively watering");
+            sendData(channel + channelAddBy, "Inside while loop and actively watering");
             dataSent = true;
         }
         updateAndSendMoisture(channel, "on", false);
@@ -269,15 +261,14 @@ void engageWatering(int channel, int pinNum) {
 }
 
 void disengageWatering(int channel, int pinNum) {
-    int sumChannel = channel + channelAddBy;
     updateAndSendMoisture(channel, "off", false);
     digitalWrite(pinNum, HIGH); // Disengage relay
-    sendData(sumChannel, "Outside while loop, no longer watering");
+    sendData(channel + channelAddBy, "Outside while loop, no longer watering");
 }
 
 int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
-    Serial.print("Channel: ");
-    Serial.println(channel);
+    Serial.print("update and send, Channel: ");
+    Serial.println(channel + channelAddBy);
     yield();  // Allow other processes to run, useful in multitasking environments
 
     int adcValue = ads.readADC_SingleEnded(channel);  // Read ADC value once
@@ -287,7 +278,7 @@ int updateAndSendMoisture(int channel, const char* state, bool safetyFlag) {
 
     // Debug ADC value based on state
     if (strcmp(state, "on") == 0 || strcmp(state, "off") == 0) {
-        Serial.print("ADCVALUE: ");
+        Serial.print("ADC Value: ");
         Serial.println(adcValue);
         if (strcmp(state, "on") == 0) {
             Serial.println("State is on");
@@ -316,7 +307,11 @@ int readUntilValid(int channel) {
 }
 
 int calculateMoisturePercentage(int adcValue) {
-    return map(adcValue, 438, 938, 100, 0) - 20;
+    // Adjust the ADC value mapping according to your sensor calibration
+    int moisturePercentage = map(adcValue, 438, 938, 100, 0) - 20;
+    if (moisturePercentage < 0) moisturePercentage = 0;
+    if (moisturePercentage > 100) moisturePercentage = 100;
+    return moisturePercentage;
 }
 
 
@@ -347,7 +342,7 @@ void sendJsonData(DynamicJsonDocument& doc) {
 
 void updateSensor(int channel, int moisture, const char* state, bool safetyFlag) {
     Serial.println("Update Sensor");
-    sensors[channel].sensorNumber = channel;
+    sensors[channel].sensorNumber = channel + channelAddBy;
     sensors[channel].moisture = moisture;
     getTime(sensors[channel].date, MAX_DATE_LENGTH);
     strncpy(sensors[channel].state, state, MAX_STATE_LENGTH);
@@ -355,17 +350,20 @@ void updateSensor(int channel, int moisture, const char* state, bool safetyFlag)
 }
 
 
+
 void sendData(int channel, const char* message) {
+    Serial.print("Send Data Channel: ");
+    Serial.println(channel);
     DynamicJsonDocument doc(1024);
     JsonObject data = doc.createNestedObject("data");
-    int newChannel = channel - channelAddBy;
+    
     data["message"] = message;
     data["sensorNumber"] = channel;
-    data["moisture"] = sensors[newChannel].moisture;
-    data["date"] = sensors[newChannel].date;
-    data["state"] = sensors[newChannel].state;
+    data["moisture"] = sensors[channel - channelAddBy].moisture;
+    data["date"] = sensors[channel - channelAddBy].date;
+    data["state"] = sensors[channel - channelAddBy].state;
 
-  sendJsonData(doc);  // Assuming this function sends the JSON to your server
+    sendJsonData(doc);
 }
 
 
