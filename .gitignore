@@ -3,3 +3,4 @@ secrets.h
 server/.env
 server/node_modules
 docker-compose.yml
+build/preproc
