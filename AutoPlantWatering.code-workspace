@@ -2,10 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"name": "240518-142252-huzzah",
-			"path": "../Documents/PlatformIO/Projects/240518-142252-huzzah"
 		}
 	],
 	"settings": {}
