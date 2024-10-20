@@ -1,2 +1,4 @@
 secrets.h
 ./build/sketch/secrets.h
+server/.env
+server/node_modules
