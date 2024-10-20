@@ -1,14 +1,17 @@
 const express = require('express');
 const app = express();
-const { getCurrentTime, updateDataAndNotifyClients } = require('./sensorCommunication/sensors');
+const { getCurrentTime } = require('./sensorCommunication/sensors');
+const { pushToDataBuffer } = require('./mongoDB/mongo')
+
 app.use(express.json()); // Middleware to parse JSON bodies
 
 app.post('/data', (req, res) => {
-  const newData = req.body; // Assume data comes in the request body
-  let currentTime = getCurrentTime();
-  // Update your data here
-  console.log("Current Time: ", currentTime, "Data: ", newData);
-  updateDataAndNotifyClients(newData);
+  const newData = req.body;
+  const currentTime = getCurrentTime();
+
+  pushToDataBuffer(newData.data);
+
+  console.log("Current Time:", currentTime, "Data:", newData.data);
   res.status(200).send('Data received successfully');
 });
 
