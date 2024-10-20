@@ -1,6 +1,11 @@
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const { mongoUri } = require('../keys');
 
+const sensorDataBuffer = [];
+const BUFFER_SIZE = 50;
+const INSERT_INTERVAL = 5000; // 5 seconds
+let isInserting = false;
+
 const client = new MongoClient(mongoUri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -9,19 +14,77 @@ const client = new MongoClient(mongoUri, {
   }
 });
 
-const run = async () => {
-  try {
-    // Connect the client to the server	(optional starting in v4.7)
+let isConnected = false;
+
+/**
+ * Connects to the database
+ * @returns client db
+ */
+const connectToDatabase = async () => {
+  if (!isConnected) {
     await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+    isConnected = true;
   }
+  return client.db('WateringDB');
+};
+
+/**
+ * Collects the sensor data object and sends it to array if good message
+ * @param {Object} data the sensor data object
+ * @returns 
+ */
+const pushToDataBuffer = (data) => {
+  const badMessage = '30 Minutes has elapsed';
+  const outsideMessage = 'Outside while loop, no longer watering';
+  const thresholdMessage = 'moisture above 10%, not watering';
+
+  if (data.message === badMessage) {
+    return;
+  }
+
+  if (sensorDataBuffer.length >= BUFFER_SIZE && !isInserting) {
+    runDataSend();
+  }
+
+  if (data.message === outsideMessage || data.message === thresholdMessage) {
+    sensorDataBuffer.push(data);
+  }
+  
+};
+
+/**
+ * Runs batch sending to insert into db
+ */
+const runDataSend = () => {
+  isInserting = true;
+  const dataToInsert = sensorDataBuffer.splice(0, sensorDataBuffer.length);
+  insertData(dataToInsert).finally(() => {
+    isInserting = false;
+  });
 }
 
+setInterval(() => {
+  if (sensorDataBuffer.length > 0 && !isInserting) {
+    runDataSend();
+  }
+}, INSERT_INTERVAL)
+
+/**
+ * Takes in array and inserts many into db
+ * @param {Array} dataArray sensorDataBuffer array
+ */
+const insertData = async (dataArray) => {
+  try {
+    const database = await connectToDatabase();
+    const collection = database.collection('sensorReadings');
+    const result = await collection.insertMany(dataArray);
+    console.log(`${result.insertedCount} documents were inserted.`);
+  } catch (error) {
+    console.error('Error inserting document:', error);
+  }
+};
+
 module.exports = {
-  run
+  connectToDatabase,
+  pushToDataBuffer
 }
