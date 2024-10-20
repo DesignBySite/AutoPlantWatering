@@ -8,7 +8,7 @@ app.use(express.json()); // Middleware to parse JSON bodies
 app.post('/data', (req, res) => {
   const newData = req.body;
   const currentTime = getCurrentTime();
-
+  newData.data.date_time = currentTime;
   pushToDataBuffer(newData.data);
 
   console.log("Current Time:", currentTime, "Data:", newData.data);
