@@ -1,0 +1,27 @@
+.nav {
+  width: 100%;
+  margin: 0px;
+  background-color: rgb(0, 0, 202);
+  height: 40px;
+  display: grid;
+  align-content: center;
+
+  &__container {
+    margin: 0px;
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    justify-content: end;
+    justify-items: center;
+    margin-right: 10%;
+  }
+
+  &__item {
+    list-style-type: none;
+  }
+
+  &__link-style {
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+  }
+}
