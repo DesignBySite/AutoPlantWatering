@@ -1,11 +1,20 @@
+import styles from './sidebar.module.scss';
+
 const Sidebar = () => {
+  const handleOnclick = () => {
+    console.log('clicked');
+  }
   return(
-    <aside>
+    <aside className={styles.sidebar__container}>
+      <div className={styles['sidebar__inner-style']}>
         <label>Tent 1</label>
         <ul>
-          <li><button>Sensor 1</button></li>
+          <li className={styles['sidebar__list-item']}>
+            <button type='button' onClick={handleOnclick} className={styles.sensor__button}>Sensor 1</button>
+          </li>
         </ul>
-      </aside>
+      </div>
+    </aside>
   )
 }
 

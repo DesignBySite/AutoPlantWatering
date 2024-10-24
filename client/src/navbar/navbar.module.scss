@@ -1,18 +1,19 @@
 .nav {
   width: 100%;
   margin: 0px;
-  background-color: rgb(0, 0, 202);
+  background-color: rgb(26, 26, 107);
   height: 40px;
   display: grid;
   align-content: center;
+  grid-area: nav;
 
   &__container {
     margin: 0px;
     display: grid;
     grid-template-columns: repeat(3, 100px);
-    justify-content: end;
+    gap: 50px;
+    justify-content: center;
     justify-items: center;
-    margin-right: 10%;
   }
 
   &__item {

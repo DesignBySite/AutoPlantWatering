@@ -4,3 +4,4 @@ server/.env
 server/node_modules
 docker-compose.yml
 build/preproc
+node_modules
