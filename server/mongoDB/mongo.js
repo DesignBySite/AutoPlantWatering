@@ -33,7 +33,7 @@ const connectToDatabase = async () => {
  * @param {Object} data the sensor data object
  * @returns 
  */
-const pushToDataBuffer = (data) => {
+const pushToDataBuffer = (data, clients) => {
   const badMessage = '30 Minutes has elapsed';
   const outsideMessage = 'Outside while loop, no longer watering';
   const thresholdMessage = 'moisture above 10%, not watering';
@@ -48,6 +48,11 @@ const pushToDataBuffer = (data) => {
 
   if (data.message === outsideMessage || data.message === thresholdMessage) {
     sensorDataBuffer.push(data);
+    console.log('data buffer');
+    clients.forEach(client => {
+      client.write('event: sensorUpdate\n');
+      client.write(`data: ${JSON.stringify(data)}\n\n`);
+    });
   }
   
 };
