@@ -1,0 +1,29 @@
+.sidebar {
+
+  &__container {
+    display: grid;
+    height: 100%;
+    background-color: black;
+    color: white;
+    grid-area: sidebar;
+    justify-content: start;
+  }
+
+  &__inner-style {
+    padding: 10px;
+  }
+
+  &__list-item {
+    list-style-type: none;
+  }
+}
+
+.sensor {
+
+  &__button {
+    border: none;
+    background-color: transparent;
+    color: white;
+    cursor: pointer;
+  }
+}
