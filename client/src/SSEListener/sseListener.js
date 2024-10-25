@@ -10,6 +10,7 @@ const useSSEListener = () => {
     eventSource.addEventListener('sensorUpdate', (event) => {
       const newData = JSON.parse(event.data);
       updateSensorData(newData);
+      console.log('updated sensor');
     });
 
     eventSource.onerror = (err) => {

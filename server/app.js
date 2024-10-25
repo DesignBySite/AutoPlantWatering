@@ -37,6 +37,7 @@ app.get('/events', (req, res) => {
 
 app.get('/sensors', async(req, res) => {
   const result = await getSensors();
+  console.log('getting sensors');
   res.status(200).send(result)
 })
 
