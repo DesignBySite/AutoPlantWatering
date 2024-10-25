@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient } = require('mongodb');
 const { mongoUri } = require('../keys');
 
 const sensorDataBuffer = [];
@@ -6,26 +6,33 @@ const BUFFER_SIZE = 50;
 const INSERT_INTERVAL = 5000; // 5 seconds
 let isInserting = false;
 
-const client = new MongoClient(mongoUri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-let isConnected = false;
-
 /**
  * Connects to the database
  * @returns client db
  */
+let client;
+let clientPromise;
+
 const connectToDatabase = async () => {
-  if (!isConnected) {
-    await client.connect();
-    isConnected = true;
+  try {
+    if (!clientPromise) {
+      client = new MongoClient(mongoUri);
+
+      clientPromise = client.connect().then(() => {
+        console.log('Connected to MongoDB');
+        return client.db('WateringDB');
+      }).catch((error) => {
+        console.error('Error connecting to MongoDB:', error);
+        client = null;
+        clientPromise = null;
+        throw error;
+      });
+    }
+    return clientPromise;
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    throw error;
   }
-  return client.db('WateringDB');
 };
 
 /**
@@ -89,7 +96,52 @@ const insertData = async (dataArray) => {
   }
 };
 
+const getSensors = async (options = {}) => {
+  try {
+    const database = await connectToDatabase();
+    const collection = database.collection('sensorReadings'); // Corrected method
+
+    let query = {};
+
+    let startDate, endDate;
+
+    if (options.period) {
+      // Calculate startDate and endDate based on the period
+      endDate = new Date(); // Current date and time
+      switch (options.period) {
+        case 'day':
+          startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'week':
+          startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = new Date(0); // Default to epoch start if period is unrecognized
+          break;
+      }
+    } else if (options.startDate || options.endDate) {
+      // Use provided startDate and/or endDate
+      startDate = options.startDate ? new Date(options.startDate) : new Date(0);
+      endDate = options.endDate ? new Date(options.endDate) : new Date();
+    }
+
+    if (startDate && endDate) {
+      query.date_time = { $gte: startDate, $lte: endDate };
+    }
+
+    const sensorData = await collection.find(query).toArray();
+    return sensorData;
+  } catch (error) {
+    console.error('Error retrieving sensor data:', error);
+    throw error; // Re-throw the error to handle it in the calling function
+  }
+};
+
 module.exports = {
   connectToDatabase,
-  pushToDataBuffer
+  pushToDataBuffer,
+  getSensors
 }

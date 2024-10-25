@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const { getCurrentTime } = require('./sensorCommunication/sensors');
-const { pushToDataBuffer } = require('./mongoDB/mongo')
+const { pushToDataBuffer, getSensors } = require('./mongoDB/mongo')
 
 app.use(cors());
 app.use(express.json()); // Middleware to parse JSON bodies
@@ -34,5 +34,10 @@ app.get('/events', (req, res) => {
       res.end();
   });
 });
+
+app.get('/sensors', async(req, res) => {
+  const result = await getSensors();
+  res.status(200).send(result)
+})
 
 module.exports = app
