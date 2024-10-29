@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import useSensorStore from '../contextStore/sensorStore';
 
 const useSSEListener = () => {
-  const updateSensorData = useSensorStore((state) => state.updateSensorData);
+  const updateSensorData = useSensorStore((state) => state.updateIndividualSensorData);
 
   useEffect(() => {
     const eventSource = new EventSource('http://localhost:3050/events');

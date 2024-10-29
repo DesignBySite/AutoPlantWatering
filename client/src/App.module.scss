@@ -15,4 +15,11 @@
     grid-area: main;
     background-color: gray;
   }
+
+  &__chart {
+
+    &-container {
+      width: 90%;
+    }
+  }
 }

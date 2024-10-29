@@ -3,6 +3,11 @@ import { create } from 'zustand';
 
 const useSensorStore = create((set, get) => ({
   sensors: {}, // An object to hold data for each sensor
+  getSensorInfo: (number) => {
+    const sensors = get().sensors;
+    
+    return sensors[number];
+  },
   updateIndividualSensorData: (sensorData) => {
     const { sensorNumber, moisture, date_time } = sensorData;
 
