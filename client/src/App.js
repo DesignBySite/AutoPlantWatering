@@ -18,9 +18,12 @@ function App() {
     getSensors();
   },[]);
 
-  const handleGetSensorNumber = (number) => {
-    const sensors = useSensorStore.getState().sensors;
-    console.log(sensors[number]);
+  const charts = () => {
+    const array = []
+    for (let index = 0; index < 8; index++) {
+      array.push(<LineChart number={index} />)
+    }
+    return array;
   }
 
   return (
@@ -28,10 +31,8 @@ function App() {
       <Navbar />
       <Sidebar />
       <section className={styles.app__main}>
-        Main
-        <button type='button' onClick={() => handleGetSensorNumber(0)}>Get Sensors</button>
         <div className={styles['app__chart-container']}>
-          <LineChart number={7}/>
+          {charts()}
         </div>
       </section>
     </div>

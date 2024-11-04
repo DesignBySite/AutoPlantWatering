@@ -1,15 +1,27 @@
 import 'chartjs-adapter-date-fns';
 import Chart from 'chart.js/auto';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSensorStore from '../contextStore/sensorStore';
+import styles from './chart.module.scss'
 
 const LineChart = ({ number }) => {
+  const [dedupedData, setDedupedData] = useState()
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const sensorInfo = useSensorStore.getState().getSensorInfo(number);
-  const dedupedData = [...new Set(sensorInfo.map(JSON.stringify))].map(JSON.parse);
+  
+  useEffect(() => {
+    if (!sensorInfo) {
+      return;
+    }
+    setDedupedData([...new Set(sensorInfo.map(JSON.stringify))].map(JSON.parse));
+  }, [sensorInfo])
 
   useEffect(() => {
+    if (!dedupedData) {
+      return;
+    }
+
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
@@ -44,7 +56,7 @@ const LineChart = ({ number }) => {
         plugins: {
           title: {
             display: true,
-            text: 'Moisture Readings Over Time', // Main chart title
+            text: `Sensor Number ${number}`, // Main chart title
             font: {
               size: 18,
             },
@@ -90,6 +102,7 @@ const LineChart = ({ number }) => {
     <canvas
       ref={chartRef}
       id={`sensor${number}`}
+      className={styles['single-chart']}
       style={{ backgroundColor: 'white' }} // Set canvas background to white
     ></canvas>
   );
