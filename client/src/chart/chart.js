@@ -1,6 +1,6 @@
 import 'chartjs-adapter-date-fns';
 import Chart from 'chart.js/auto';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useSensorStore from '../contextStore/sensorStore';
 import styles from './chart.module.scss'
 
@@ -10,10 +10,10 @@ const LineChart = ({ number }) => {
   const chartInstance = useRef(null);
 
   const sensorInfo = useSensorStore((state) => state.getSensorInfo(number));
-  const getInitialLoad = useSensorStore((state) => state.getInitialLoad);
+  const initialLoad = useSensorStore((state) => state.initialLoad);
   
   useEffect(() => {
-    if (!getInitialLoad) {
+    if (!initialLoad) {
       console.log('load false');
       return;
     }
@@ -23,27 +23,24 @@ const LineChart = ({ number }) => {
     }
     console.log('not undefined');
     setDedupedData([...new Set(sensorInfo.map(JSON.stringify))].map(JSON.parse));
-  }, [sensorInfo, getInitialLoad])
+  }, [sensorInfo, initialLoad])
 
-  useEffect(() => {
-    if (!dedupedData || !chartRef.current) {
-      return;
-    }
-
-    if (chartInstance.current) {
-      return;
-    }
-
-    console.log('running setup of charts');
-    const dates = dedupedData.map((i) => new Date(i.date_time));
-    const earliestDate = new Date(Math.min(...dates));
-
-    const dayNumbers = dates.map((date) => {
+  const getDayNumbers = useCallback((dates, earliestDate) => {
+    const result = dates.map((date) => {
       const dayDiff = (date - earliestDate) / (1000 * 60 * 60 * 24); // difference in days
       return dayDiff;
     });
 
-    chartInstance.current = new Chart(chartRef.current, {
+    return result;
+  }, [])
+
+  const getDedupedData = useCallback(() => {
+    const data = dedupedData.map((i) => new Date(i.date_time));
+    return data;
+  }, [dedupedData])
+
+  const createNewChart = useCallback((dayNumbers, dedupedData) => {
+    const chart = new Chart(chartRef.current, {
       type: 'line',
       data: {
         labels: dayNumbers, // X-axis labels as day numbers
@@ -97,7 +94,24 @@ const LineChart = ({ number }) => {
           },
         },
       },
-    });
+    }); 
+    return chart;
+  }, [number])
+  
+  useEffect(() => {
+    if (!dedupedData || !chartRef.current) {
+      return;
+    }
+
+    if (chartInstance.current) {
+      return;
+    }
+
+    const dates = getDedupedData();
+    const earliestDate = new Date(Math.min(...dates));
+    const dayNumbers = getDayNumbers(dates, earliestDate)
+
+    chartInstance.current = createNewChart(dayNumbers, dedupedData);
 
     return () => {
       if (chartInstance.current) {
@@ -105,33 +119,28 @@ const LineChart = ({ number }) => {
         chartInstance.current = null;
       }
     };
-  }, [dedupedData]);
+  }, [dedupedData, getDedupedData, getDayNumbers, createNewChart]);
 
   useEffect(() => {
     if (!dedupedData || !chartInstance.current) {
       return;
     }
-    console.log('charts already created');
-    const dates = dedupedData.map((i) => new Date(i.date_time));
+    
+    const dates = getDedupedData();
     const earliestDate = new Date(Math.min(...dates));
-
-    const dayNumbers = dates.map((date) => {
-      const dayDiff = (date - earliestDate) / (1000 * 60 * 60 * 24); // difference in days
-      return dayDiff;
-    });
+    const dayNumbers = getDayNumbers(dates, earliestDate);
 
     chartInstance.current.data.labels = dayNumbers;
     chartInstance.current.data.datasets[0].data = dedupedData.map((i) => i.moisture);
     chartInstance.current.update();
-  }, [dedupedData]);
-
+  }, [dedupedData, getDedupedData, getDayNumbers]);
 
   return (
     <canvas
       ref={chartRef}
       id={`sensor${number}`}
       className={styles['single-chart']}
-      style={{ backgroundColor: 'white' }} // Set canvas background to white
+      style={{ backgroundColor: 'black' }} // Set canvas background to white
     ></canvas>
   );
 };
