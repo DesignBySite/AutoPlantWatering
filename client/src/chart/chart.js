@@ -8,25 +8,33 @@ const LineChart = ({ number }) => {
   const [dedupedData, setDedupedData] = useState()
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
-  const sensorInfo = useSensorStore.getState().getSensorInfo(number);
+
+  const sensorInfo = useSensorStore((state) => state.getSensorInfo(number));
+  const getInitialLoad = useSensorStore((state) => state.getInitialLoad);
   
   useEffect(() => {
-    if (!sensorInfo) {
+    if (!getInitialLoad) {
+      console.log('load false');
       return;
     }
+    if (!sensorInfo) {
+      console.log('undefined');
+      return;
+    }
+    console.log('not undefined');
     setDedupedData([...new Set(sensorInfo.map(JSON.stringify))].map(JSON.parse));
-  }, [sensorInfo])
+  }, [sensorInfo, getInitialLoad])
 
   useEffect(() => {
-    if (!dedupedData) {
+    if (!dedupedData || !chartRef.current) {
       return;
     }
 
     if (chartInstance.current) {
-      chartInstance.current.destroy();
+      return;
     }
 
-    // Convert date_time to day numbers from 0 to 30
+    console.log('running setup of charts');
     const dates = dedupedData.map((i) => new Date(i.date_time));
     const earliestDate = new Date(Math.min(...dates));
 
@@ -94,9 +102,29 @@ const LineChart = ({ number }) => {
     return () => {
       if (chartInstance.current) {
         chartInstance.current.destroy();
+        chartInstance.current = null;
       }
     };
-  }, );
+  }, [dedupedData]);
+
+  useEffect(() => {
+    if (!dedupedData || !chartInstance.current) {
+      return;
+    }
+    console.log('charts already created');
+    const dates = dedupedData.map((i) => new Date(i.date_time));
+    const earliestDate = new Date(Math.min(...dates));
+
+    const dayNumbers = dates.map((date) => {
+      const dayDiff = (date - earliestDate) / (1000 * 60 * 60 * 24); // difference in days
+      return dayDiff;
+    });
+
+    chartInstance.current.data.labels = dayNumbers;
+    chartInstance.current.data.datasets[0].data = dedupedData.map((i) => i.moisture);
+    chartInstance.current.update();
+  }, [dedupedData]);
+
 
   return (
     <canvas

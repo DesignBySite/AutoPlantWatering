@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from './navbar/navbar';
 import Sidebar from './sidebar/sidebar';
 import styles from './App.module.scss';
@@ -8,15 +8,16 @@ import LineChart from './chart/chart';
 
 function App() {
   useSSEListener();
-  
+  const [loading, setLoading] = useState(false)
   const getSensors = async() => {
     const data = await fetch('http://localhost:3050/sensors');
     const results = await data.json();
-    useSensorStore.getState().initialSensorDataImport(results);
+    await useSensorStore.getState().initialSensorDataImport(results);
+    setLoading(useSensorStore.getState().initialLoad);
   }
   useEffect(() => {
     getSensors();
-  },[]);
+  },[useSensorStore.getState().sensors]);
 
   const charts = () => {
     const array = []
@@ -31,9 +32,12 @@ function App() {
       <Navbar />
       <Sidebar />
       <section className={styles.app__main}>
+        {loading === true ?
         <div className={styles['app__chart-container']}>
           {charts()}
         </div>
+        : null
+      }
       </section>
     </div>
   );
